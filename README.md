@@ -18,9 +18,9 @@ How to use this class
 
 This class provides many methods to connect and manage a Pixoo device.
 
-* connect(): creates a connection with the device and keeps it open while the script is active
-* draw_pic(): draws a picture (resized to 16x16 pixels) from a PNG file
-* draw_anim(): displays an animation on the Pixoo based on a GIF file (16x16 pixels)
-* set_system_brightness: set the global brightness to a specific level (0-100)
+* `connect()̀`: creates a connection with the device and keeps it open while the script is active
+* `draw_pic()`: draws a picture (resized to 16x16 pixels) from a PNG file
+* `draw_anim()`: displays an animation on the Pixoo based on a GIF file (16x16 pixels)
+* `set_system_brightness`: set the global brightness to a specific level (0-100)
 
 
