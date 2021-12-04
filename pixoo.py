@@ -2,6 +2,7 @@
 Pixoo 
 """
 
+import sys
 import socket
 from time import sleep
 from PIL import Image
@@ -66,7 +67,7 @@ class Pixoo(object):
     # compute checksum (first byte excluded)
     cs = self.__spp_frame_checksum(frame_buffer)
 
-    # create our suffix (including checksum)
+    # create our suffix (including checksum)
     frame_suffix = [cs&0xff, (cs>>8)&0xff, 2]
 
     # return output buffer
@@ -110,14 +111,14 @@ class Pixoo(object):
     """
     Encode a 16x16 image.
     """
-    # ensure image is 16x16
+    # ensure image is 16x16
     w,h = img.size
     if w == h:
-      # resize if image is too big
+      # resize if image is too big
       if w > 16:
         img = img.resize((16,16))
 
-      # create palette and pixel array
+      # create palette and pixel array
       pixels = []
       palette = []
       for y in range(16):
@@ -229,7 +230,7 @@ class PixooMax(Pixoo):
     """
     nb_colors, palette, pixel_data = self.encode_image(filepath)
     frame_size = 8 + len(pixel_data) + len(palette)
-    frame_header = [0xAA, frame_size&0xff, (frame_size>>8)&0xff, 0, 0, 3, nb_colors&0xff, (nb_colors&0xff00)>>8]
+    frame_header = [0xAA, frame_size&0xff, (frame_size>>8)&0xff, 0, 0, 3, nb_colors&0xff, (nb_colors>>8)&0xff]
     frame = frame_header + palette + pixel_data
     prefix = [0x0, 0x0A,0x0A,0x04]
     self.send(0x44, prefix+frame)
@@ -242,20 +243,21 @@ class PixooMax(Pixoo):
 
   def encode_image(self, filepath):
     img = Image.open(filepath)
+    img = img.convert(mode="P", palette=Image.ADAPTIVE, colors=256).convert(mode="RGB")
     return self.encode_raw_image(img)
 
   def encode_raw_image(self, img):
     """
     Encode a 32x32 image.
     """
-    # ensure image is 32x32
+    # ensure image is 32x32
     w,h = img.size
     if w == h:
-      # resize if image is too big
+      # resize if image is too big
       if w > 32:
         img = img.resize((32,32))
 
-      # create palette and pixel array
+      # create palette and pixel array
       pixels = []
       palette = []
       for y in range(32):
@@ -280,11 +282,21 @@ class PixooMax(Pixoo):
 
       encoded_pixels = []
       encoded_byte = ''
+
+      # Create our pixels bitstream
       for i in pixels:
         encoded_byte = bin(i)[2:].rjust(bitwidth, '0') + encoded_byte
-        if len(encoded_byte) >= 8:
-            encoded_pixels.append(encoded_byte[-8:])
-            encoded_byte = encoded_byte[:-8]
+      
+      # Encode pixel data
+      while len(encoded_byte) >= 8:
+        encoded_pixels.append(encoded_byte[-8:])
+        encoded_byte = encoded_byte[:-8]
+
+      # If some bits left, pack and encode
+      padding = 8 - len(encoded_byte)
+      encoded_pixels.append(encoded_byte.rjust(bitwidth, '0'))
+
+      # Convert into array of 8-bit values
       encoded_data = [int(c, 2) for c in encoded_pixels]
       encoded_palette = []
       for r,g,b in palette:
@@ -294,10 +306,17 @@ class PixooMax(Pixoo):
       print('[!] Image must be square.')
 
 if __name__ == '__main__':
-    pixoo = PixooMax('11:75:58:51:AC:4D')
+  if len(sys.argv) >= 3:
+    pixoo_baddr = sys.argv[1]
+    img_path = sys.argv[2]
+
+    pixoo = PixooMax(pixoo_baddr)
     pixoo.connect()
 
-    # mandatory to wait at least 1 second
+    # mandatory to wait at least 1 second
     sleep(1)
 
-    pixoo.draw_pic('sonic.png')
+    # draw image
+    pixoo.draw_pic(img_path)
+  else:
+    print('Usage: %s <Pixoo BT address> <image path>' % sys.argv[0])
