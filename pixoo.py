@@ -255,6 +255,9 @@ class PixooMax(Pixoo):
       if w > 32:
         img = img.resize((32,32))
 
+      # ensure a maximum of 256 colors
+      img = img.convert(mode="P", palette=Image.ADAPTIVE, colors=256).convert(mode="RGB")
+
       # create palette and pixel array
       pixels = []
       palette = []
